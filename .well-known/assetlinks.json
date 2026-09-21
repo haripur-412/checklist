@@ -2,7 +2,7 @@
       "relation": ["delegate_permission/common.handle_all_urls"],
       "target": {
         "namespace": "android_app",
-        "package_name": "io.github.shamim345.twa",
-        "sha256_cert_fingerprints": ["A8:16:9A:B5:82:93:9D:BD:15:67:EB:31:16:45:37:82:2F:62:8E:9F:95:3E:C1:1D:C2:3F:1E:CF:EE:4C:FD:36"]
+        "package_name": "io.github.haripur_412.twa",
+        "sha256_cert_fingerprints": ["AF:65:64:FB:7C:A2:C8:70:41:61:3A:37:2F:5B:CF:FE:C8:2D:38:85:63:E6:4C:64:53:BF:9E:12:79:32:FB:56"]
       }
     }]
