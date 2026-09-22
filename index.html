@@ -1585,6 +1585,7 @@
 
         let successCount = 0;
         let failCount = 0;
+        const failedItems = [];
 
         for (const eq of savedEquipments) {
             const valuesArray = [];
@@ -1600,6 +1601,8 @@
                 username: username,
                 data: valuesArray
             };
+
+            submitBtn.innerText = `Uploading "${eq.sheetName}"...`;
 
             try {
                 const response = await fetch(APPSCRIPT_URL, {
@@ -1617,23 +1620,43 @@
                     successCount++;
                 } else {
                     console.error(`Apps Script Error for ${eq.sheetName}:`, responseText);
-                    showMessage('Server Error', `Server returned error for "${eq.sheetName}": ${responseText}`);
                     failCount++;
+                    failedItems.push(eq.sheetName);
                 }
             } catch (err) {
-                console.error(`Network Error submitting ${eq.sheetName}:`, err);
-                showMessage('Network Error', `Network error submitting "${eq.sheetName}". Please check connection.`);
+                // The request may still have reached the sheet even though this device
+                // never got the "Successful" reply back (slow/lost response). We do NOT
+                // auto-retry here, because retrying a request that already succeeded on
+                // the server would create a duplicate row. The entry is left in local
+                // storage so the person can check the sheet, then resubmit only if it's
+                // genuinely missing.
+                console.error(`Network/response error submitting ${eq.sheetName}:`, err);
                 failCount++;
+                failedItems.push(eq.sheetName);
             }
         }
 
         submitBtn.disabled = false;
         submitBtn.innerText = "Confirm & Finalize Submission";
 
+        if (successCount > 0) {
+            // At least one item made it through, so clear every saved entry from this
+            // batch — including any that failed — instead of leaving partial data behind.
+            failedItems.forEach(name => localStorage.removeItem(name));
+        }
+
         if (failCount === 0) {
             showMessage('Submission Complete', `Success! All ${successCount} equipment record(s) uploaded successfully.`);
+        } else if (successCount > 0) {
+            showMessage(
+                'Submission Complete',
+                `${successCount} uploaded successfully.\n\n${failCount} item(s) did not get a confirmation reply, but may already be in the sheet (this can happen with a slow connection):\n${failedItems.join(', ')}\n\nSaved data for this batch has been cleared. Please check the Google Sheet for these items, and re-fill and resubmit only if they're genuinely missing.`
+            );
         } else {
-            showMessage('Submission Complete', `Process completed: ${successCount} uploaded successfully, ${failCount} failed.`);
+            showMessage(
+                'Check Before Resubmitting',
+                `${successCount} uploaded successfully.\n\n${failCount} item(s) did not get a confirmation reply, but may have already been saved to the sheet:\n${failedItems.join(', ')}\n\nPlease check the Google Sheet for these before tapping Submit again, to avoid duplicate rows.`
+            );
         }
 
         showHome();
