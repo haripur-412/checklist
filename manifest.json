@@ -1,6 +1,6 @@
 {
-  "name": "Equipment Inspection App",
-  "short_name": "Inspection",
+  "name": "Equipment Checklist",
+  "short_name": "Equipment Checklist",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#ffffff",
