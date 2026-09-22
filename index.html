@@ -354,6 +354,15 @@
     </div>
 </div>
 
+<!-- Message Modal Dialog (replaces native alert(), which shows the site URL as its title) -->
+<div id="messageModal" class="modal-overlay hidden">
+    <div class="modal-card" style="text-align: center;">
+        <h3 id="messageModalTitle" style="margin-top: 0; font-size: 1.1rem; color: var(--primary-dark);"></h3>
+        <p id="messageModalText" style="font-size: 0.9rem; color: var(--text-color); line-height: 1.6; margin-bottom: 18px; white-space: pre-line;"></p>
+        <button class="btn" onclick="closeMessage()">OK</button>
+    </div>
+</div>
+
 <script>
     // ⚠️ REPLACE THIS WITH YOUR DEPLOYED APPSCRIPT WEB APP URL
     const APPSCRIPT_URL = "https://script.google.com/macros/s/AKfycbwccOMQ14rvW0jMgxPZQLEjwbDPZd8nV3DPWCfYtnh1EX01o9BRiXE05S8MFW5mpFbN/exec";
@@ -1237,7 +1246,7 @@
     function saveUserNameFromModal() {
         const inputVal = document.getElementById('modalUsernameInput').value.trim();
         if (!inputVal) {
-            alert('Please enter a valid name.');
+            showMessage('Notice', 'Please enter a valid name.');
             return;
         }
         localStorage.setItem('app_user_name', inputVal);
@@ -1275,6 +1284,17 @@
 
     function closeCredits() {
         document.getElementById('creditsModal').classList.add('hidden');
+    }
+
+    // --- Message Modal Functions (replaces native alert(), which shows the site URL as its title) ---
+    function showMessage(title, text) {
+        document.getElementById('messageModalTitle').innerText = title;
+        document.getElementById('messageModalText').innerText = text;
+        document.getElementById('messageModal').classList.remove('hidden');
+    }
+
+    function closeMessage() {
+        document.getElementById('messageModal').classList.add('hidden');
     }
 
     // --- View Navigation ---
@@ -1487,7 +1507,7 @@
         }
 
         localStorage.setItem(currentSelectedEquipment, JSON.stringify(savedObject));
-        alert(`Data for "${currentSelectedEquipment}" saved locally!`);
+        showMessage('Saved', `Data for "${currentSelectedEquipment}" saved locally!`);
         showEquipmentList();
     }
 
@@ -1556,7 +1576,7 @@
         });
 
         if (savedEquipments.length === 0) {
-            alert('No saved data to submit.');
+            showMessage('Notice', 'No saved data to submit.');
             return;
         }
 
@@ -1597,12 +1617,12 @@
                     successCount++;
                 } else {
                     console.error(`Apps Script Error for ${eq.sheetName}:`, responseText);
-                    alert(`Server returned error for "${eq.sheetName}": ${responseText}`);
+                    showMessage('Server Error', `Server returned error for "${eq.sheetName}": ${responseText}`);
                     failCount++;
                 }
             } catch (err) {
                 console.error(`Network Error submitting ${eq.sheetName}:`, err);
-                alert(`Network error submitting "${eq.sheetName}". Please check connection.`);
+                showMessage('Network Error', `Network error submitting "${eq.sheetName}". Please check connection.`);
                 failCount++;
             }
         }
@@ -1611,9 +1631,9 @@
         submitBtn.innerText = "Confirm & Finalize Submission";
 
         if (failCount === 0) {
-            alert(`Success! All ${successCount} equipment record(s) uploaded successfully.`);
+            showMessage('Submission Complete', `Success! All ${successCount} equipment record(s) uploaded successfully.`);
         } else {
-            alert(`Process completed: ${successCount} uploaded successfully, ${failCount} failed.`);
+            showMessage('Submission Complete', `Process completed: ${successCount} uploaded successfully, ${failCount} failed.`);
         }
 
         showHome();
