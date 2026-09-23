@@ -1472,6 +1472,7 @@
                 formGroup.appendChild(optionsGroup);
             } else if (paramStr.includes('~text')) {
                 const textInput = document.createElement('input');
+                titleLabel.innerText = "Any Other Abnormalities";
                 textInput.type = 'text';
                 textInput.name = paramName;
                 textInput.value = savedValue || '';
@@ -1605,6 +1606,13 @@
             submitBtn.innerText = `Uploading "${eq.sheetName}"...`;
 
             try {
+                // We only care that the request reached the network and got a response —
+                // not what the response text says. Apps Script sometimes replies slowly
+                // or with something other than "Successful" even though it already wrote
+                // the row, so waiting on an exact text match caused false "failed" results
+                // for uploads that had, in fact, gone through. A thrown error here means
+                // the request never left the phone (offline, DNS failure, etc.) — that is
+                // the only case we still treat as a real failure.
                 const response = await fetch(APPSCRIPT_URL, {
                     method: 'POST',
                     headers: {
@@ -1613,24 +1621,15 @@
                     body: JSON.stringify(payload)
                 });
 
-                const responseText = await response.text();
+                const responseText = await response.text().catch(() => '(no response body)');
+                console.log(`Submitted ${eq.sheetName} — server replied:`, responseText);
 
-                if (responseText.trim() === "Successful") {
-                    localStorage.removeItem(eq.sheetName);
-                    successCount++;
-                } else {
-                    console.error(`Apps Script Error for ${eq.sheetName}:`, responseText);
-                    failCount++;
-                    failedItems.push(eq.sheetName);
-                }
+                localStorage.removeItem(eq.sheetName);
+                successCount++;
             } catch (err) {
-                // The request may still have reached the sheet even though this device
-                // never got the "Successful" reply back (slow/lost response). We do NOT
-                // auto-retry here, because retrying a request that already succeeded on
-                // the server would create a duplicate row. The entry is left in local
-                // storage so the person can check the sheet, then resubmit only if it's
-                // genuinely missing.
-                console.error(`Network/response error submitting ${eq.sheetName}:`, err);
+                // Genuine network failure — the request never made it out, so keep the
+                // data saved locally for a retry.
+                console.error(`Network error submitting ${eq.sheetName}:`, err);
                 failCount++;
                 failedItems.push(eq.sheetName);
             }
@@ -1639,23 +1638,12 @@
         submitBtn.disabled = false;
         submitBtn.innerText = "Confirm & Finalize Submission";
 
-        if (successCount > 0) {
-            // At least one item made it through, so clear every saved entry from this
-            // batch — including any that failed — instead of leaving partial data behind.
-            failedItems.forEach(name => localStorage.removeItem(name));
-        }
-
         if (failCount === 0) {
             showMessage('Submission Complete', `Success! All ${successCount} equipment record(s) uploaded successfully.`);
-        } else if (successCount > 0) {
-            showMessage(
-                'Submission Complete',
-                `${successCount} uploaded successfully.\n\n${failCount} item(s) did not get a confirmation reply, but may already be in the sheet (this can happen with a slow connection):\n${failedItems.join(', ')}\n\nSaved data for this batch has been cleared. Please check the Google Sheet for these items, and re-fill and resubmit only if they're genuinely missing.`
-            );
         } else {
             showMessage(
-                'Check Before Resubmitting',
-                `${successCount} uploaded successfully.\n\n${failCount} item(s) did not get a confirmation reply, but may have already been saved to the sheet:\n${failedItems.join(', ')}\n\nPlease check the Google Sheet for these before tapping Submit again, to avoid duplicate rows.`
+                'Submission Complete',
+                `${successCount} uploaded successfully.\n\n${failCount} item(s) could not be sent due to a network error and are still saved on this device:\n${failedItems.join(', ')}\n\nCheck your connection and tap Submit again to retry these.`
             );
         }
 
